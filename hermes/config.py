@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     # Quem dá a nota. As chaves ficam sem prefixo: são os nomes que os SDKs usam.
     llm_provider: Literal["openai", "gemini"] = "gemini"
     llm_model: str | None = None  # vazio = o padrão do provedor, abaixo
+    # Usado quando o modelo principal responde 503 (só Gemini). Vazio desliga.
+    llm_fallback_model: str | None = "gemini-3.5-flash-lite"
     openai_api_key: str | None = Field(
         default=None, validation_alias=AliasChoices("OPENAI_API_KEY", "HERMES_OPENAI_API_KEY")
     )

@@ -120,11 +120,26 @@ class OpenAIScorer(Scorer):
 
 
 class GeminiScorer(Scorer):
+    def __init__(self, client, model: str, profile: str, fallback: str | None = None):
+        super().__init__(client, model, profile)
+        self._fallback = fallback
+
     def _generate(self, instructions, text):
+        from google.genai import errors
+
+        try:
+            return self._call(self._model, instructions, text)
+        except errors.ServerError as exc:
+            # 503 "high demand" acontece em horário de pico; o modelo reserva costuma estar livre
+            if not self._fallback or getattr(exc, "code", None) not in (500, 503):
+                raise
+            return self._call(self._fallback, instructions, text)
+
+    def _call(self, model, instructions, text):
         from google.genai import types
 
         resp = self._client.models.generate_content(
-            model=self._model,
+            model=model,
             contents=text,
             config=types.GenerateContentConfig(
                 system_instruction=instructions,
@@ -144,7 +159,9 @@ class GeminiScorer(Scorer):
         return isinstance(exc, errors.ClientError) and getattr(exc, "code", None) in (401, 403, 429)
 
 
-def make_scorer(provider: str, api_key: str, model: str, profile: str) -> Scorer:
+def make_scorer(
+    provider: str, api_key: str, model: str, profile: str, fallback: str | None = None
+) -> Scorer:
     if provider == "openai":
         from openai import OpenAI
 
@@ -152,5 +169,5 @@ def make_scorer(provider: str, api_key: str, model: str, profile: str) -> Scorer
     if provider == "gemini":
         from google import genai
 
-        return GeminiScorer(genai.Client(api_key=api_key), model, profile)
+        return GeminiScorer(genai.Client(api_key=api_key), model, profile, fallback)
     raise ValueError(f"provedor de LLM desconhecido: {provider!r}")

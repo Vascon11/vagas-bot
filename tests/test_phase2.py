@@ -197,3 +197,36 @@ def test_fatal_error_stops_the_round():
     assert calls == [a]  # não tenta a segunda
     assert r.errors == ["rodada interrompida: You have no credits remaining"]
     assert db.get(b)["status"] == Status.NOVA
+
+
+def test_gemini_falls_back_on_503_but_not_on_other_errors():
+    from google.genai import errors
+
+    from hermes.scoring import GeminiScorer
+
+    calls = []
+
+    class Models:
+        def __init__(self, fail_code):
+            self.fail_code = fail_code
+
+        def generate_content(self, model, contents, config):
+            calls.append(model)
+            if model == "principal":
+                cls = errors.ServerError if self.fail_code >= 500 else errors.ClientError
+                raise cls(self.fail_code, {"error": {"code": self.fail_code, "message": "x"}})
+            return type("R", (), {"parsed": score(77)})()
+
+    class Client:
+        def __init__(self, code):
+            self.models = Models(code)
+
+    row = {"id": 1, "title": "t", "company": "c", "location": None, "source": "gupy",
+           "description": "d"}
+    assert GeminiScorer(Client(503), "principal", "p", "reserva").score(row, []).score == 77
+    assert calls == ["principal", "reserva"]
+
+    calls.clear()
+    with pytest.raises(errors.ClientError):
+        GeminiScorer(Client(400), "principal", "p", "reserva").score(row, [])
+    assert calls == ["principal"]

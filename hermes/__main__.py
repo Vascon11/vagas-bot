@@ -52,6 +52,7 @@ def cmd_avaliar(args, settings: Settings) -> int:
         settings.llm_api_key,
         settings.model,
         settings.profile_file.read_text(encoding="utf-8"),
+        settings.llm_fallback_model or None,
     )
     db = Database(settings.db_path)
     r = evaluate_new(db, scorer, load_rules(settings.searches_file), settings.score_min, args.limit)

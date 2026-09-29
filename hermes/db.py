@@ -1,6 +1,6 @@
 import sqlite3
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from hermes.models import JobPosting, Status, check_transition
@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     score         INTEGER,
     score_reason  TEXT,             -- JSON do scoring.Score
     decision      TEXT,             -- "aprovou" / "descartou", quando o Gabriel decide
+    notified_at   TEXT,             -- quando o card foi enviado no Telegram
     status        TEXT NOT NULL,
     found_at      TEXT NOT NULL,
     status_at     TEXT NOT NULL,
@@ -56,8 +57,10 @@ class Database:
 
     def _migrate(self) -> None:
         cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(jobs)")}
-        if "decision" not in cols:  # bancos criados na fase 1
-            self.conn.execute("ALTER TABLE jobs ADD COLUMN decision TEXT")
+        # colunas que não existiam nos bancos das fases anteriores
+        for col in ("decision", "notified_at"):
+            if col not in cols:
+                self.conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} TEXT")
 
     def add_job(self, job: JobPosting) -> int | None:
         """Grava a vaga como "nova". Devolve o id, ou None se ela já existe.
@@ -138,3 +141,27 @@ class Database:
                WHERE decision IS NOT NULL ORDER BY status_at DESC LIMIT ?""",
             (limit,),
         ).fetchall()
+
+    def to_notify(self) -> list[sqlite3.Row]:
+        """Vagas esperando o Gabriel cujo card ainda não foi enviado, melhores primeiro."""
+        return self.conn.execute(
+            """SELECT * FROM jobs WHERE status = ? AND notified_at IS NULL
+               ORDER BY score DESC""",
+            (Status.AGUARDANDO_VOCE,),
+        ).fetchall()
+
+    def mark_notified(self, job_id: int) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE jobs SET notified_at = ? WHERE id = ?", (_now(), job_id))
+
+    def stale(self, days: int, statuses=(Status.APLICADA, Status.EM_PROCESSO)) -> list[sqlite3.Row]:
+        """Candidaturas sem nenhuma mudança de estado há mais de `days` dias."""
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
+        marks = ",".join("?" * len(statuses))
+        return self.conn.execute(
+            f"SELECT * FROM jobs WHERE status IN ({marks}) AND status_at < ?",
+            (*statuses, cutoff),
+        ).fetchall()
+
+    def counts(self) -> dict[str, int]:
+        return dict(self.conn.execute("SELECT status, count(*) FROM jobs GROUP BY status"))

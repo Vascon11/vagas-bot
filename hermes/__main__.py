@@ -95,6 +95,13 @@ def cmd_listar(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_bot(args, settings: Settings) -> int:
+    from hermes.bot import run
+
+    run(settings)
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="hermes")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -114,13 +121,18 @@ def main(argv=None) -> int:
     p.add_argument("status", nargs="?", default=Status.AGUARDANDO_VOCE,
                    choices=[s.value for s in Status])
 
+    sub.add_parser("bot", help="bot do Telegram + buscas agendadas (o modo de produção)")
+
     args = parser.parse_args(argv)
     logging.basicConfig(
         level=logging.INFO if args.verbose else logging.WARNING,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    # O httpx registra a URL de cada chamada em INFO, e na API do Telegram o token
+    # vai na URL. Fora do -v isso já não aparece; com -v, o token acabaria no log.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     commands = {"buscar": cmd_buscar, "avaliar": cmd_avaliar, "rodar": cmd_rodar,
-                "listar": cmd_listar}
+                "listar": cmd_listar, "bot": cmd_bot}
     return commands[args.cmd](args, Settings())
 
 

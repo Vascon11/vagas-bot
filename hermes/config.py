@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     )
     score_min: int = 60
 
+    telegram_token: str | None = Field(
+        default=None, validation_alias=AliasChoices("TELEGRAM_TOKEN", "HERMES_TELEGRAM_TOKEN")
+    )
+    telegram_chat_id: int | None = Field(
+        default=None, validation_alias=AliasChoices("TELEGRAM_CHAT_ID", "HERMES_TELEGRAM_CHAT_ID")
+    )
+    search_every_hours: float = 2
+    digest_hour: int = 8  # resumo diário e varredura dos 90 dias
+    timezone: str = "America/Sao_Paulo"
+
     @property
     def llm_api_key(self) -> str | None:
         return {"openai": self.openai_api_key, "gemini": self.gemini_api_key}[self.llm_provider]

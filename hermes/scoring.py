@@ -1,4 +1,4 @@
-"""Nota de compatibilidade vaga × perfil, com a API da OpenAI.
+"""Nota de compatibilidade vaga × perfil, com um LLM (OpenAI ou Gemini).
 
 O rubric segue a ideia do career-ops (github.com/career-ops-hq/career-ops):
 avaliar contra o perfil real, dizer "não aplique" sem rodeio e marcar vaga
@@ -39,18 +39,7 @@ DECISÕES RECENTES DELE:
 
 
 class FatalScoringError(RuntimeError):
-    """Erro que vale para todas as vagas (sem crédito, chave inválida): parar a rodada."""
-
-
-def _is_fatal(exc: Exception) -> bool:
-    import openai
-
-    if isinstance(exc, (openai.AuthenticationError, openai.PermissionDeniedError)):
-        return True
-    return isinstance(exc, openai.RateLimitError) and (
-        getattr(exc, "code", None) in ("insufficient_quota", "credit_balance_exhausted")
-        or "insufficient_quota" in str(exc)
-    )
+    """Erro que vale para todas as vagas (sem crédito, chave inválida, cota): parar a rodada."""
 
 
 class Score(BaseModel):
@@ -80,26 +69,88 @@ def format_examples(decisions) -> str:
 
 
 class Scorer:
+    """Monta o prompt e valida a resposta. Cada provedor só implementa _generate."""
+
     def __init__(self, client, model: str, profile: str):
         self._client = client
         self._model = model
         self._profile = profile
 
     def score(self, row, decisions) -> Score:
+        instructions = INSTRUCTIONS.format(
+            profile=self._profile, examples=format_examples(decisions)
+        )
         try:
-            resp = self._client.responses.parse(
-                model=self._model,
-                instructions=INSTRUCTIONS.format(
-                    profile=self._profile, examples=format_examples(decisions)
-                ),
-                input=format_job(row),
-                text_format=Score,
-                store=False,  # a OpenAI não guarda as vagas nem o perfil
-            )
+            result = self._generate(instructions, format_job(row))
         except Exception as exc:
-            if _is_fatal(exc):
-                raise FatalScoringError(getattr(exc, "message", str(exc))) from exc
+            if self._is_fatal(exc):
+                raise FatalScoringError(getattr(exc, "message", None) or str(exc)) from exc
             raise
-        if resp.output_parsed is None:
+        if result is None:
             raise ValueError(f"resposta sem JSON válido para a vaga {row['id']}")
+        return result
+
+    def _generate(self, instructions: str, text: str) -> Score | None:
+        raise NotImplementedError
+
+    def _is_fatal(self, exc: Exception) -> bool:
+        return False
+
+
+class OpenAIScorer(Scorer):
+    def _generate(self, instructions, text):
+        resp = self._client.responses.parse(
+            model=self._model,
+            instructions=instructions,
+            input=text,
+            text_format=Score,
+            store=False,  # a OpenAI não guarda as vagas nem o perfil
+        )
         return resp.output_parsed
+
+    def _is_fatal(self, exc):
+        import openai
+
+        if isinstance(exc, (openai.AuthenticationError, openai.PermissionDeniedError)):
+            return True
+        return isinstance(exc, openai.RateLimitError) and (
+            getattr(exc, "code", None) in ("insufficient_quota", "credit_balance_exhausted")
+            or "insufficient_quota" in str(exc)
+        )
+
+
+class GeminiScorer(Scorer):
+    def _generate(self, instructions, text):
+        from google.genai import types
+
+        resp = self._client.models.generate_content(
+            model=self._model,
+            contents=text,
+            config=types.GenerateContentConfig(
+                system_instruction=instructions,
+                response_mime_type="application/json",
+                response_schema=Score,
+                # a nota não usa ferramentas; sem isso o SDK avisa a cada chamada
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            ),
+        )
+        return resp.parsed
+
+    def _is_fatal(self, exc):
+        from google.genai import errors
+
+        # 401/403: chave inválida ou API desligada. 429: cota ou crédito — as próximas
+        # vagas bateriam no mesmo limite, então a rodada para e tenta na próxima.
+        return isinstance(exc, errors.ClientError) and getattr(exc, "code", None) in (401, 403, 429)
+
+
+def make_scorer(provider: str, api_key: str, model: str, profile: str) -> Scorer:
+    if provider == "openai":
+        from openai import OpenAI
+
+        return OpenAIScorer(OpenAI(api_key=api_key), model, profile)
+    if provider == "gemini":
+        from google import genai
+
+        return GeminiScorer(genai.Client(api_key=api_key), model, profile)
+    raise ValueError(f"provedor de LLM desconhecido: {provider!r}")

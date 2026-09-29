@@ -9,6 +9,7 @@ dependencies = [
   "pydantic-settings>=2.4",
   "pyyaml>=6",
   "openai>=3.22",
+  "google-genai>=2.25",
 ]
 
 [project.optional-dependencies]

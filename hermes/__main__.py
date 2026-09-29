@@ -37,19 +37,20 @@ def cmd_buscar(args, settings: Settings) -> int:
 
 
 def cmd_avaliar(args, settings: Settings) -> int:
-    if not settings.openai_api_key:
-        print("OPENAI_API_KEY não está no .env", file=sys.stderr)
+    if not settings.llm_api_key:
+        key = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY"}[settings.llm_provider]
+        print(f"{key} não está no .env (HERMES_LLM_PROVIDER={settings.llm_provider})",
+              file=sys.stderr)
         return 1
     if not settings.profile_file.exists():
         print(f"{settings.profile_file} não existe — copie de profile.example.md", file=sys.stderr)
         return 1
-    from openai import OpenAI
+    from hermes.scoring import make_scorer
 
-    from hermes.scoring import Scorer
-
-    scorer = Scorer(
-        OpenAI(api_key=settings.openai_api_key),
-        settings.openai_model,
+    scorer = make_scorer(
+        settings.llm_provider,
+        settings.llm_api_key,
+        settings.model,
         settings.profile_file.read_text(encoding="utf-8"),
     )
     db = Database(settings.db_path)

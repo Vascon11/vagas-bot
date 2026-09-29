@@ -2,22 +2,52 @@
 # Mantenha poucas buscas e results_wanted baixo: volume alto é o que faz o LinkedIn
 # bloquear o IP de casa.
 #
-# job_type: fulltime | parttime | internship | contract  (vazio = qualquer)
-# O nível (estágio/júnior) não é filtrado aqui — o LinkedIn marca errado com
-# frequência. Quem decide é o pré-filtro e a nota da fase 2.
+# sites: linkedin | indeed | gupy
+# job_type (só JobSpy): fulltime | parttime | internship | contract  (vazio = qualquer)
+# gupy_term / gupy_state: sobrescrevem term / estado só na Gupy, cuja busca por
+#   nome é bem mais literal que a do LinkedIn.
+# O nível (estágio/júnior) não é filtrado na busca — o LinkedIn marca errado com
+# frequência. Quem decide é o pré-filtro abaixo e a nota do LLM.
 
 defaults:
   location: "São Paulo, Brasil"
-  sites: [linkedin]
+  sites: [linkedin, gupy]
   hours_old: 48
   results_wanted: 15
 
 searches:
   - name: estagio-dev
     term: "estágio desenvolvedor"
+    gupy_term: "estágio"
 
   - name: estagio-ti
     term: "estágio TI"
+    sites: [linkedin]
 
   - name: junior-dev
     term: "desenvolvedor júnior"
+    gupy_term: "desenvolvedor"
+
+# Descarte certo pelo título ou tipo, antes de gastar token. Na dúvida, não coloque
+# aqui: o LLM decide melhor. Comparação sem acento e por palavra inteira.
+filtros:
+  excluir_no_titulo:
+    - sênior
+    - senior
+    - sr
+    - pleno
+    - especialista
+    - lead
+    - líder
+    - tech lead
+    - coordenador
+    - coordenadora
+    - gerente
+    - manager
+    - talent community
+    - banco de talentos
+  # "mid-senior level" NÃO entra: o LinkedIn marca vaga júnior assim com frequência.
+  excluir_niveis:
+    - talent_pool
+    - director
+    - executive

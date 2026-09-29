@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     level         TEXT,
     is_remote     INTEGER,
     score         INTEGER,
-    score_reason  TEXT,
+    score_reason  TEXT,             -- JSON do scoring.Score
+    decision      TEXT,             -- "aprovou" / "descartou", quando o Gabriel decide
     status        TEXT NOT NULL,
     found_at      TEXT NOT NULL,
     status_at     TEXT NOT NULL,
@@ -51,6 +52,12 @@ class Database:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(jobs)")}
+        if "decision" not in cols:  # bancos criados na fase 1
+            self.conn.execute("ALTER TABLE jobs ADD COLUMN decision TEXT")
 
     def add_job(self, job: JobPosting) -> int | None:
         """Grava a vaga como "nova". Devolve o id, ou None se ela já existe.
@@ -110,4 +117,24 @@ class Database:
     def events(self, job_id: int) -> list[sqlite3.Row]:
         return self.conn.execute(
             "SELECT * FROM events WHERE job_id = ? ORDER BY id", (job_id,)
+        ).fetchall()
+
+    def save_score(self, job_id: int, score: int, reason_json: str) -> None:
+        with self.conn:
+            self.conn.execute(
+                "UPDATE jobs SET score = ?, score_reason = ? WHERE id = ?",
+                (score, reason_json, job_id),
+            )
+
+    def set_decision(self, job_id: int, decision: str) -> None:
+        assert decision in ("aprovou", "descartou")
+        with self.conn:
+            self.conn.execute("UPDATE jobs SET decision = ? WHERE id = ?", (decision, job_id))
+
+    def recent_decisions(self, limit: int = 10) -> list[sqlite3.Row]:
+        """As últimas vagas que o Gabriel aprovou ou descartou — exemplos para a nota."""
+        return self.conn.execute(
+            """SELECT title, company, location, decision FROM jobs
+               WHERE decision IS NOT NULL ORDER BY status_at DESC LIMIT ?""",
+            (limit,),
         ).fetchall()

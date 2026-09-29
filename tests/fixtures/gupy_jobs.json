@@ -1,0 +1,83 @@
+{
+ "data": [
+  {
+   "id": 12574249,
+   "companyId": 1199,
+   "name": "Estágio em Produção de Entretenimento | SBT Ribeirão Preto",
+   "description": "O SBT busca mais um SBTista para fazer parte da família!Aqui as oportunidades são iguais para todos!Com forte convicção em nosso potencial quando trabalhamos juntos, estimulamos um ambiente de colaboração e parceria. Valorizamos os nossos colaboradores e prezamos pelo desenvolvimento e aprendizado d",
+   "careerPageId": 2081,
+   "careerPageName": "#SejaSBT",
+   "careerPageLogo": "https://attachments.gupy.io/production/companies/1199/career/2081/images/2022-02-02_12-06_logo.png",
+   "careerPageUrl": "https://sejasbt.gupy.io/eyJzb3VyY2UiOiJndXB5X3BvcnRhbCJ9",
+   "type": "vacancy_type_internship",
+   "publishedDate": "2026-09-29T20:56:51.172Z",
+   "applicationDeadline": "2026-11-22",
+   "isRemoteWork": false,
+   "city": "Ribeirão Preto",
+   "state": "São Paulo",
+   "country": "Brasil",
+   "jobUrl": "https://sejasbt.gupy.io/job/eyJqb2JJZCI6MTI1NzQyNDksInNvdXJjZSI6Imd1cHlfcG9ydGFsIn0=?jobBoardSource=gupy_portal",
+   "badges": {
+    "friendlyBadge": true,
+    "isPWD": true
+   },
+   "workplaceType": "on-site",
+   "disabilities": true,
+   "isConfidentialCareerPage": false,
+   "skills": []
+  },
+  {
+   "id": 1000018925,
+   "companyId": 1000006567,
+   "name": "Estágio em Administração - Central de Atendimento Cartão Cidadão",
+   "description": "Salário: a partir de R$ 2.000,00\n\nO Instituto Avança SP está em busca de um(a) Estagiário(a) de Administração para atuar em Louveira/SP, apoiando rotinas administrativas e o atendimento ao cidadão em um ambiente dinâmico, colaborativo e voltado ao suporte direto à população.\n\nEsta é uma excelente op",
+   "careerPageId": 1000006567,
+   "careerPageName": "AVANCASP",
+   "careerPageLogo": "https://candidato-ja-company-images-prod.gupy.io/company-logos/avancasp/de213c66424c3297bd63eddfb811ea17.png",
+   "careerPageUrl": "https://vaga-ja.com/eyJzb3VyY2UiOiJndXB5X3BvcnRhbCJ9",
+   "type": "vacancy_type_internship",
+   "publishedDate": "2026-09-29",
+   "applicationDeadline": "2026-10-29",
+   "isRemoteWork": false,
+   "city": "Louveira",
+   "state": "São Paulo",
+   "country": "Brasil",
+   "jobUrl": "https://vaga-ja.com/vagas/avancasp/estagio-em-administracao-central-de-atendimento-cartao-cidadao-1?jobBoardSource=gupy_portal",
+   "workplaceType": "on-site",
+   "disabilities": false,
+   "isConfidentialCareerPage": false,
+   "skills": []
+  },
+  {
+   "id": 12627900,
+   "companyId": 2310,
+   "name": "Estágio de T.I | Holding",
+   "description": "Tradição e Modernidade são o coração dos nossos negócios.Com a capacidade de antecipar tendências, a JHSF traz soluções inovadoras para os segmentos em que atua, e estamos em busca de uma pessoa para atuar como&nbsp;Estágiário(a) de Tecnologia da Informação, dando suporte as áreas de negócio, com pr",
+   "careerPageId": 4074,
+   "careerPageName": "JHSF | Holding",
+   "careerPageLogo": "https://attachments.gupy.io/production/companies/2310/career/4074/images/2021-04-16_14-59_logo.jpg",
+   "careerPageUrl": "https://jhsf.gupy.io/eyJzb3VyY2UiOiJndXB5X3BvcnRhbCJ9",
+   "type": "vacancy_type_talent_pool",
+   "publishedDate": "2026-09-29T16:34:48.139Z",
+   "applicationDeadline": "2026-11-30",
+   "isRemoteWork": false,
+   "city": "São Paulo",
+   "state": "São Paulo",
+   "country": "Brasil",
+   "jobUrl": "https://jhsf.gupy.io/job/eyJqb2JJZCI6MTI2Mjc5MDAsInNvdXJjZSI6Imd1cHlfcG9ydGFsIn0=?jobBoardSource=gupy_portal",
+   "badges": {
+    "friendlyBadge": true,
+    "isPWD": true
+   },
+   "workplaceType": "on-site",
+   "disabilities": true,
+   "isConfidentialCareerPage": false,
+   "skills": []
+  }
+ ],
+ "pagination": {
+  "total": 3,
+  "limit": 100,
+  "offset": 0
+ }
+}

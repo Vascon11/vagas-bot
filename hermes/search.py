@@ -1,28 +1,43 @@
 import logging
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 import yaml
 
 from hermes.db import Database
+from hermes.filters import FilterRules
 from hermes.models import JobPosting
 from hermes.sources.base import SearchQuery, Source
 
 log = logging.getLogger(__name__)
 
 
+_QUERY_FIELDS = {f.name for f in fields(SearchQuery)} - {"extra"}
+
+
+def _load(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
 def load_queries(path: Path) -> list[SearchQuery]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data = _load(path)
     defaults = data.get("defaults", {})
     queries = []
     for item in data.get("searches", []):
         merged = {**defaults, **item}
         if "sites" in merged:
             merged["sites"] = tuple(merged["sites"])
-        queries.append(SearchQuery(**merged))
+        # Chave que não é campo do SearchQuery é específica de uma fonte (gupy_term…).
+        known = {k: v for k, v in merged.items() if k in _QUERY_FIELDS}
+        extra = {k: v for k, v in merged.items() if k not in _QUERY_FIELDS}
+        queries.append(SearchQuery(**known, extra=extra))
     return queries
+
+
+def load_rules(path: Path) -> FilterRules:
+    return FilterRules.from_dict(_load(path).get("filtros"))
 
 
 @dataclass

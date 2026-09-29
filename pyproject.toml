@@ -1,0 +1,24 @@
+[project]
+name = "hermes"
+version = "0.1.0"
+description = "Assistente pessoal de busca e acompanhamento de vagas"
+requires-python = ">=3.12"
+dependencies = [
+  "python-jobspy>=1.1.82",
+  "httpx>=0.27",
+  "pydantic-settings>=2.4",
+  "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["hermes*"]

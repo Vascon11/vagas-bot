@@ -1,0 +1,23 @@
+# Buscas do Hermes. Cada item vira uma chamada por fonte; "defaults" vale para todas.
+# Mantenha poucas buscas e results_wanted baixo: volume alto é o que faz o LinkedIn
+# bloquear o IP de casa.
+#
+# job_type: fulltime | parttime | internship | contract  (vazio = qualquer)
+# O nível (estágio/júnior) não é filtrado aqui — o LinkedIn marca errado com
+# frequência. Quem decide é o pré-filtro e a nota da fase 2.
+
+defaults:
+  location: "São Paulo, Brasil"
+  sites: [linkedin]
+  hours_old: 48
+  results_wanted: 15
+
+searches:
+  - name: estagio-dev
+    term: "estágio desenvolvedor"
+
+  - name: estagio-ti
+    term: "estágio TI"
+
+  - name: junior-dev
+    term: "desenvolvedor júnior"

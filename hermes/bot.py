@@ -23,7 +23,8 @@ from telegram.ext import (
 
 from hermes.config import Settings
 from hermes.db import Database
-from hermes.jobs import run_cycle, sweep_no_reply
+from hermes.jobs import make_scorer_from, run_cycle, sweep_no_reply
+from hermes.mail import ICONS, GmailInbox, apply_to_job, check_mail
 from hermes.models import InvalidTransition, Status
 
 log = logging.getLogger(__name__)
@@ -125,6 +126,9 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.id != _settings(context).telegram_chat_id:
         await query.answer()
         return
+    if query.data.startswith("m:"):
+        await on_mail_button(update, context)
+        return
     action, _, raw_id = query.data.partition(":")
     db = _db(context)
     problem = apply_action(db, action, int(raw_id))
@@ -134,6 +138,95 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         card_text(row), parse_mode=ParseMode.HTML,
         reply_markup=card_keyboard(row), disable_web_page_preview=True,
     )
+
+
+# --- e-mail -------------------------------------------------------------------
+
+
+def notice_text(db: Database, n) -> str:
+    e = html.escape
+    icon = ICONS.get(n.kind, "✉️")
+    lines = [f"{icon} <b>{n.kind.replace('_', ' ').capitalize()}</b>"]
+    if n.job_id is not None:
+        job = db.get(n.job_id)
+        lines.append(f"{e(job['title'])} — {e(job['company'])}")
+    lines.append(e(n.summary))
+    if n.deadline:
+        lines.append(f"⏰ <b>Prazo:</b> {e(n.deadline)}")
+    if n.job_id is not None:
+        job = db.get(n.job_id)
+        lines.append(f"\n<i>{STATUS_LABEL.get(Status(job['status']), job['status'])} · #{job['id']}</i>")
+    return "\n".join(lines)
+
+
+def link_keyboard(db: Database, mail_id: int) -> InlineKeyboardMarkup:
+    """Para e-mail sem vaga ligada: um botão por candidatura ativa, mais ignorar."""
+    rows = [[InlineKeyboardButton(f"#{r['id']} {r['company'][:28]}", callback_data=f"m:{mail_id}:{r['id']}")]
+            for r in db.active_applications()[:8]]
+    rows.append([InlineKeyboardButton("🙈 Não é de nenhuma", callback_data=f"m:{mail_id}:0")])
+    return InlineKeyboardMarkup(rows)
+
+
+async def on_mail_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    _, raw_mail, raw_job = query.data.split(":")
+    db = _db(context)
+    mail = db.get_mail(int(raw_mail))
+    if mail["job_id"] is not None:
+        await query.answer("Esse e-mail já está ligado a uma vaga.")
+        return
+    if raw_job == "0":
+        await query.answer("Ok, ignorado.")
+        await query.edit_message_reply_markup(None)
+        return
+    job_id = int(raw_job)
+    db.link_mail(mail["id"], job_id)
+    apply_to_job(db, job_id, mail["kind"], mail["summary"])
+    await query.answer("Ligado!")
+    job = db.get(job_id)
+    await query.edit_message_text(
+        f"{query.message.text_html}\n\n✅ Ligado a <b>{html.escape(job['title'])}</b> — "
+        f"{html.escape(job['company'])} ({STATUS_LABEL.get(Status(job['status']))})",
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def mail_cycle(context: ContextTypes.DEFAULT_TYPE) -> None:
+    data = context.application.bot_data
+    settings = data["settings"]
+    if data.get("mail_running") or not settings.mail_enabled:
+        return
+    data["mail_running"] = True
+    try:
+        notices = await asyncio.to_thread(_check_mail_sync, settings)
+    except Exception as exc:
+        log.exception("leitura do e-mail falhou")
+        # Não avisa a cada 15 min pelo mesmo erro: só na primeira vez seguida.
+        if not data.get("mail_error"):
+            await context.bot.send_message(settings.telegram_chat_id, f"⚠️ Não consegui ler o e-mail: {exc}")
+        data["mail_error"] = True
+        return
+    finally:
+        data["mail_running"] = False
+    data["mail_error"] = False
+    db = _db(context)
+    for n in notices:
+        markup = link_keyboard(db, n.mail_id) if n.job_id is None else None
+        text = notice_text(db, n)
+        if n.job_id is None:
+            text += "\n\n<b>De qual candidatura é?</b>"
+        await context.bot.send_message(settings.telegram_chat_id, text, parse_mode=ParseMode.HTML,
+                                       reply_markup=markup)
+
+
+def _check_mail_sync(settings: Settings):
+    llm = make_scorer_from(settings)
+    if llm is None:
+        return []
+    inbox = GmailInbox(settings.gmail_address, settings.gmail_app_password,
+                       settings.mail_only_to, settings.mail_first_run_days)
+    # conexão própria: roda fora da thread do bot
+    return check_mail(Database(settings.db_path), inbox, llm)
 
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -286,6 +379,10 @@ def build_app(settings: Settings) -> Application:
     )
     app.job_queue.run_daily(daily, time=time(settings.digest_hour, 0, tzinfo=tz), name="diario")
     app.job_queue.run_repeating(heartbeat, interval=60, first=1, name="heartbeat")
+    if settings.mail_enabled:
+        app.job_queue.run_repeating(
+            mail_cycle, interval=settings.mail_every_minutes * 60, first=60, name="email"
+        )
     return app
 
 

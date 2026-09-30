@@ -80,17 +80,21 @@ class Scorer:
         instructions = INSTRUCTIONS.format(
             profile=self._profile, examples=format_examples(decisions)
         )
+        return self.ask(instructions, format_job(row), Score)
+
+    def ask(self, instructions: str, text: str, schema: type[BaseModel]):
+        """Uma chamada com saída estruturada no formato `schema` (nota, e-mail…)."""
         try:
-            result = self._generate(instructions, format_job(row))
+            result = self._generate(instructions, text, schema)
         except Exception as exc:
             if self._is_fatal(exc):
                 raise FatalScoringError(getattr(exc, "message", None) or str(exc)) from exc
             raise
         if result is None:
-            raise ValueError(f"resposta sem JSON válido para a vaga {row['id']}")
+            raise ValueError("resposta sem JSON válido")
         return result
 
-    def _generate(self, instructions: str, text: str) -> Score | None:
+    def _generate(self, instructions: str, text: str, schema: type[BaseModel]):
         raise NotImplementedError
 
     def _is_fatal(self, exc: Exception) -> bool:
@@ -98,12 +102,12 @@ class Scorer:
 
 
 class OpenAIScorer(Scorer):
-    def _generate(self, instructions, text):
+    def _generate(self, instructions, text, schema):
         resp = self._client.responses.parse(
             model=self._model,
             instructions=instructions,
             input=text,
-            text_format=Score,
+            text_format=schema,
             store=False,  # a OpenAI não guarda as vagas nem o perfil
         )
         return resp.output_parsed
@@ -124,18 +128,18 @@ class GeminiScorer(Scorer):
         super().__init__(client, model, profile)
         self._fallback = fallback
 
-    def _generate(self, instructions, text):
+    def _generate(self, instructions, text, schema):
         from google.genai import errors
 
         try:
-            return self._call(self._model, instructions, text)
+            return self._call(self._model, instructions, text, schema)
         except errors.ServerError as exc:
             # 503 "high demand" acontece em horário de pico; o modelo reserva costuma estar livre
             if not self._fallback or getattr(exc, "code", None) not in (500, 503):
                 raise
-            return self._call(self._fallback, instructions, text)
+            return self._call(self._fallback, instructions, text, schema)
 
-    def _call(self, model, instructions, text):
+    def _call(self, model, instructions, text, schema):
         from google.genai import types
 
         resp = self._client.models.generate_content(
@@ -144,7 +148,7 @@ class GeminiScorer(Scorer):
             config=types.GenerateContentConfig(
                 system_instruction=instructions,
                 response_mime_type="application/json",
-                response_schema=Score,
+                response_schema=schema,
                 # a nota não usa ferramentas; sem isso o SDK avisa a cada chamada
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             ),

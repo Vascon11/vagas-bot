@@ -40,6 +40,23 @@ class Settings(BaseSettings):
     telegram_chat_id: int | None = Field(
         default=None, validation_alias=AliasChoices("TELEGRAM_CHAT_ID", "HERMES_TELEGRAM_CHAT_ID")
     )
+    # Gmail que recebe o redirecionamento do Outlook (IMAP + senha de app).
+    gmail_address: str | None = Field(
+        default=None, validation_alias=AliasChoices("GMAIL_ADDRESS", "HERMES_GMAIL_ADDRESS")
+    )
+    gmail_app_password: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GMAIL_APP_PASSWORD", "HERMES_GMAIL_APP_PASSWORD"),
+    )
+    # Só os e-mails endereçados a este endereço são lidos (o Outlook que redireciona).
+    mail_only_to: str | None = None
+    mail_every_minutes: float = 15
+    mail_first_run_days: int = 7
+
+    @property
+    def mail_enabled(self) -> bool:
+        return bool(self.gmail_address and self.gmail_app_password and self.mail_only_to)
+
     search_every_hours: float = 2
     digest_hour: int = 8  # resumo diário e varredura dos 90 dias
     timezone: str = "America/Sao_Paulo"

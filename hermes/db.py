@@ -31,6 +31,25 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS jobs_dedup ON jobs (dedup_key);
 CREATE INDEX IF NOT EXISTS jobs_status ON jobs (status);
 
+CREATE TABLE IF NOT EXISTS mails (
+    id           INTEGER PRIMARY KEY,
+    message_id   TEXT NOT NULL UNIQUE,  -- Message-ID do e-mail: não processa duas vezes
+    received_at  TEXT,
+    sender       TEXT,
+    subject      TEXT,
+    kind         TEXT NOT NULL,         -- tipo classificado (mail.MailKind)
+    company      TEXT,
+    summary      TEXT,
+    job_id       INTEGER REFERENCES jobs (id),
+    created_at   TEXT NOT NULL
+);
+
+-- Estado pequeno de chave/valor (ex.: até qual UID do IMAP já foi lido).
+CREATE TABLE IF NOT EXISTS kv (
+    key    TEXT PRIMARY KEY,
+    value  TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS events (
     id       INTEGER PRIMARY KEY,
     job_id   INTEGER NOT NULL REFERENCES jobs (id),
@@ -165,3 +184,56 @@ class Database:
 
     def counts(self) -> dict[str, int]:
         return dict(self.conn.execute("SELECT status, count(*) FROM jobs GROUP BY status"))
+
+    # --- e-mail -------------------------------------------------------------
+
+    def kv_get(self, key: str) -> str | None:
+        row = self.conn.execute("SELECT value FROM kv WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
+
+    def kv_set(self, key: str, value: str) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO kv (key, value) VALUES (?, ?) "
+                "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+                (key, value),
+            )
+
+    def mail_seen(self, message_id: str) -> bool:
+        return bool(self.conn.execute(
+            "SELECT 1 FROM mails WHERE message_id = ?", (message_id,)
+        ).fetchone())
+
+    def add_mail(self, message_id, received_at, sender, subject, kind, company, summary,
+                 job_id=None) -> int:
+        with self.conn:
+            cur = self.conn.execute(
+                """INSERT INTO mails (message_id, received_at, sender, subject, kind, company,
+                       summary, job_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (message_id, received_at, sender, subject, kind, company, summary, job_id, _now()),
+            )
+        return cur.lastrowid
+
+    def get_mail(self, mail_id: int) -> sqlite3.Row:
+        row = self.conn.execute("SELECT * FROM mails WHERE id = ?", (mail_id,)).fetchone()
+        if row is None:
+            raise KeyError(mail_id)
+        return row
+
+    def link_mail(self, mail_id: int, job_id: int) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE mails SET job_id = ? WHERE id = ?", (job_id, mail_id))
+
+    def add_event(self, job_id: int, kind: str, detail: str) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO events (job_id, at, kind, detail) VALUES (?, ?, ?, ?)",
+                (job_id, _now(), kind, detail),
+            )
+
+    def active_applications(self) -> list[sqlite3.Row]:
+        """Vagas que podem receber resposta por e-mail: as que ele aprovou em diante."""
+        return self.conn.execute(
+            """SELECT * FROM jobs WHERE status IN (?, ?, ?, ?) ORDER BY status_at DESC""",
+            (Status.APROVADA, Status.APLICADA, Status.EM_PROCESSO, Status.SEM_RESPOSTA),
+        ).fetchall()

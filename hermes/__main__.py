@@ -95,6 +95,46 @@ def cmd_listar(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_fila(args, settings: Settings) -> int:
+    """Vagas que o Gabriel aprovou e ainda não aplicou — a fila de candidaturas."""
+    db = Database(settings.db_path)
+    rows = db.by_status(Status.APROVADA)
+    if args.todas:
+        rows += db.by_status(Status.AGUARDANDO_VOCE)
+    if args.json:
+        keys = ("id", "status", "title", "company", "location", "url", "score", "source")
+        out = [{k: r[k] for k in keys} | {"avaliacao": json.loads(r["score_reason"] or "null"),
+                                          "descricao": r["description"]} for r in rows]
+        print(json.dumps(out, ensure_ascii=False, indent=1))
+    else:
+        for row in rows:
+            print_job(row)
+        print(f"\n{len(rows)} vagas na fila")
+    return 0
+
+
+def cmd_marcar(args, settings: Settings) -> int:
+    from hermes.models import InvalidTransition
+
+    db = Database(settings.db_path)
+    new = Status(args.status)
+    try:
+        db.transition(args.id, new, args.nota or "pela linha de comando")
+    except KeyError:
+        print(f"vaga #{args.id} não existe", file=sys.stderr)
+        return 1
+    except InvalidTransition as exc:
+        print(f"não mudei a vaga #{args.id}: {exc}", file=sys.stderr)
+        return 1
+    if new in (Status.APROVADA, Status.APLICADA):
+        db.set_decision(args.id, "aprovou")
+    elif new == Status.DESCARTADA:
+        db.set_decision(args.id, "descartou")
+    row = db.get(args.id)
+    print(f"#{row['id']} {row['title']} — {row['company']}: {row['status']}")
+    return 0
+
+
 def cmd_bot(args, settings: Settings) -> int:
     from hermes.bot import run
 
@@ -121,6 +161,15 @@ def main(argv=None) -> int:
     p.add_argument("status", nargs="?", default=Status.AGUARDANDO_VOCE,
                    choices=[s.value for s in Status])
 
+    p = sub.add_parser("fila", help="vagas aprovadas esperando candidatura")
+    p.add_argument("--json", action="store_true", help="saída em JSON, com a descrição")
+    p.add_argument("--todas", action="store_true", help="inclui as que ainda esperam decisão")
+
+    p = sub.add_parser("marcar", help="muda o estado de uma vaga (ex.: depois de aplicar)")
+    p.add_argument("id", type=int)
+    p.add_argument("status", choices=[s.value for s in Status])
+    p.add_argument("--nota", help="texto que fica no histórico da vaga")
+
     sub.add_parser("bot", help="bot do Telegram + buscas agendadas (o modo de produção)")
 
     args = parser.parse_args(argv)
@@ -132,7 +181,7 @@ def main(argv=None) -> int:
     # vai na URL. Fora do -v isso já não aparece; com -v, o token acabaria no log.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     commands = {"buscar": cmd_buscar, "avaliar": cmd_avaliar, "rodar": cmd_rodar,
-                "listar": cmd_listar, "bot": cmd_bot}
+                "listar": cmd_listar, "fila": cmd_fila, "marcar": cmd_marcar, "bot": cmd_bot}
     return commands[args.cmd](args, Settings())
 
 

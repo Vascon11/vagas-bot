@@ -246,6 +246,11 @@ async def daily(context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
+async def heartbeat(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Toca data/heartbeat: o healthcheck do Docker considera o bot vivo por ele."""
+    (_settings(context).data_dir / "heartbeat").touch()
+
+
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     from telegram.error import NetworkError, TimedOut
 
@@ -280,6 +285,7 @@ def build_app(settings: Settings) -> Application:
         scheduled_cycle, interval=settings.search_every_hours * 3600, first=30, name="ciclo"
     )
     app.job_queue.run_daily(daily, time=time(settings.digest_hour, 0, tzinfo=tz), name="diario")
+    app.job_queue.run_repeating(heartbeat, interval=60, first=1, name="heartbeat")
     return app
 
 

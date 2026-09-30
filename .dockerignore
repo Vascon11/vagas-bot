@@ -1,0 +1,11 @@
+.venv
+.git
+.env
+data
+tests
+deploy
+config
+profile.md
+__pycache__
+*.pyc
+.pytest_cache

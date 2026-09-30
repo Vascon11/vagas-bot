@@ -1,0 +1,30 @@
+# Projeto compose "vagas-bot" no ZimaOS. Nome diferente de propósito: já existe um
+# projeto/container "hermes" (o Hermes Agent da Nous Research) nesta máquina.
+name: vagas-bot
+
+services:
+  vagas-bot:
+    build: ./app
+    image: vagas-bot:latest
+    container_name: vagas-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HERMES_DATA_DIR: /app/data
+      # Pasta montada, não arquivo: bind mount de arquivo aponta para o inode e
+      # não enxerga uma edição feita por troca de arquivo (armadilha já vista no resume).
+      HERMES_SEARCHES_FILE: /app/config/searches.yaml
+      HERMES_PROFILE_FILE: /app/config/profile.md
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    mem_limit: 384m
+    cpus: 0.5
+    networks: [vagas_net]
+    # Nenhuma porta publicada: o Telegram é long polling, tudo é conexão de saída.
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "3"}
+
+networks:
+  vagas_net:

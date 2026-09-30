@@ -34,5 +34,3 @@ Configuração: `.env` (copie de `.env.example`), `profile.md` (copie de `profil
 fica fora do git) e `searches.yaml`, com as buscas e o pré-filtro. Mantenha o volume baixo: é o que protege o IP
 de bloqueio pelo LinkedIn.
 
-Próximas fases:
-leitura do Outlook via Microsoft Graph · deploy no ZimaOS.

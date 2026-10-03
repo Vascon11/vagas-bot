@@ -1,6 +1,8 @@
 """Gupy via API pública do portal de vagas (a mesma que portal.gupy.io usa).
 
-Endpoint conferido em 29/09/2026 — o antigo portal.api.gupy.io/api/job responde 404.
+Endpoint conferido em 02/10/2026: é o proxy que o próprio portal chama no navegador.
+Os anteriores (portal.api.gupy.io/api/job e employability-portal.gupy.io/api/v1/jobs)
+passaram a responder 404, em 29/09 e 30/09.
 Não há filtro por data na API: a janela de hours_old é aplicada aqui. O
 pagination.total não é confiável, então a paginação para quando uma página vem
 menor que o limite.
@@ -16,7 +18,7 @@ from hermes.sources.base import SearchQuery
 
 log = logging.getLogger(__name__)
 
-API = "https://employability-portal.gupy.io/api/v1/jobs"
+API = "https://portal.gupy.io/api/job-search/jobs"
 PAGE = 100
 HEADERS = {"User-Agent": "Mozilla/5.0", "Origin": "https://portal.gupy.io"}
 

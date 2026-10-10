@@ -18,12 +18,14 @@ def client_returning(status, seen):
     return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
 
-def test_embed_is_plain_text_with_score_and_link():
+def test_embed_has_score_and_link_but_no_personal_reasons():
     db = Database(":memory:")
     e = card_embed(db.get(add(db)))
     assert e["title"] == "Estágio Dev <Python>" and e["url"] == "https://acme.gupy.io/job/1"
     assert "Acme & Cia" in e["description"] and "**Nota 80**" in e["description"]
-    assert "⚠️ prazo curto" in e["description"] and e["color"] == 0x2ECC71
+    assert e["color"] == 0x2ECC71
+    # motivos e alertas citam o perfil do Gabriel; o canal é aberto
+    assert "prazo curto" not in e["description"] and "Python <3" not in e["description"]
 
 
 def test_post_sends_embed_without_mentions():

@@ -1,7 +1,9 @@
 """Cópia dos cards num canal do Discord, por webhook.
 
-Só posta: aprovar, descartar e marcar continuam no Telegram. A URL do webhook é
-segredo (quem tem posta no canal), então nunca entra em log nem em mensagem de erro.
+Só posta: aprovar, descartar e marcar continuam no Telegram. O canal é aberto
+aos amigos do Gabriel, então motivos e alertas da nota (que citam o perfil dele)
+ficam de fora. A URL do webhook é segredo (quem tem posta no canal), então nunca
+entra em log nem em mensagem de erro.
 """
 
 import json
@@ -27,8 +29,6 @@ def card_embed(row) -> dict:
             f"\n**Nota {row['score']}** · {s['recomendacao'].replace('_', ' ')} · "
             f"{s['nivel_detectado']} · {s['modelo_trabalho']}"
         )
-        lines += [f"➕ {m}" for m in s["motivos"]]
-        lines += [f"⚠️ {a}" for a in s["alertas"]]
     return {
         "title": row["title"][:256],
         "url": row["url"],

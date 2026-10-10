@@ -23,6 +23,7 @@ from telegram.ext import (
 
 from hermes.config import Settings
 from hermes.db import Database
+from hermes.discord import post_card
 from hermes.jobs import make_scorer_from, run_cycle, sweep_no_reply
 from hermes.mail import ICONS, GmailInbox, apply_to_job, check_mail
 from hermes.models import InvalidTransition, Status
@@ -305,6 +306,8 @@ async def cycle(context: ContextTypes.DEFAULT_TYPE, announce_empty: bool = False
     for row in new_cards:
         await send_card(context, chat_id, row)
         db.mark_notified(row["id"])
+        if settings.discord_webhook_url:
+            await post_card(settings.discord_webhook_url, row)
 
     problems = result.search.errors + (result.evaluation.errors if result.evaluation else [])
     if problems:

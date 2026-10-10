@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     telegram_chat_id: int | None = Field(
         default=None, validation_alias=AliasChoices("TELEGRAM_CHAT_ID", "HERMES_TELEGRAM_CHAT_ID")
     )
+    # Webhook de um canal do Discord que recebe uma cópia dos cards. Vazio desliga.
+    discord_webhook_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DISCORD_WEBHOOK_URL", "HERMES_DISCORD_WEBHOOK_URL"),
+    )
     # Gmail que recebe o redirecionamento do Outlook (IMAP + senha de app).
     gmail_address: str | None = Field(
         default=None, validation_alias=AliasChoices("GMAIL_ADDRESS", "HERMES_GMAIL_ADDRESS")

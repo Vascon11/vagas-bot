@@ -106,3 +106,26 @@ def test_run_cycle_end_to_end_without_network(tmp_path):
     assert len(r.search.new_ids) == 2
     assert len(r.evaluation.to_you) == 1 and r.evaluation.prefiltered == 1
     assert [row["title"] for row in Database(settings.db_path).to_notify()] == ["Estágio Dev"]
+
+
+def test_run_cycle_without_llm_sends_everything_that_passes_the_title_filter(tmp_path):
+    (tmp_path / "s.yaml").write_text(
+        "searches:\n  - name: a\n    term: estagio\nfiltros:\n  excluir_no_titulo: [pleno]\n"
+    )
+
+    class Source:
+        def search(self, q):
+            return [JobPosting(source="gupy", external_id="1", title="Estágio Dev", company="A", url="u"),
+                    JobPosting(source="gupy", external_id="2", title="Dev Pleno", company="B", url="u")]
+
+    class Scorer:
+        def score(self, row, decisions):
+            raise AssertionError("com o LLM desligado ninguém dá nota")
+
+    settings = Settings(data_dir=tmp_path, searches_file=tmp_path / "s.yaml", pause_min=0, pause_max=0,
+                        llm_enabled=False)
+    r = run_cycle(settings, sources=[Source()], scorer=Scorer())
+    assert len(r.evaluation.to_you) == 1 and r.evaluation.prefiltered == 1
+    [row] = Database(settings.db_path).to_notify()
+    assert row["title"] == "Estágio Dev" and row["score"] is None
+    assert "Nota" not in card_text(row)

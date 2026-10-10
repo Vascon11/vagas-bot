@@ -52,3 +52,18 @@ def evaluate_new(
             db.transition(job_id, Status.DESCARTADA, f"nota {s.score} < {score_min}")
             result.low_score += 1
     return result
+
+
+def pass_unscored(db: Database, rules: FilterRules) -> EvalResult:
+    """Sem LLM: o pré-filtro de título decide sozinho e o resto vai direto para você."""
+    result = EvalResult()
+    for row in db.by_status(Status.NOVA):
+        job_id = row["id"]
+        if reason := prefilter(row["title"], row["level"], rules):
+            db.transition(job_id, Status.DESCARTADA, f"pré-filtro: {reason}")
+            result.prefiltered += 1
+            continue
+        db.transition(job_id, Status.AVALIADA, "sem nota (LLM desligado)")
+        db.transition(job_id, Status.AGUARDANDO_VOCE)
+        result.to_you.append(job_id)
+    return result

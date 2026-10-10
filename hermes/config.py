@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     pause_min: float = 4.0
     pause_max: float = 9.0
 
+    # False desliga a nota: toda vaga que passa no pré-filtro de título vira card.
+    llm_enabled: bool = True
     # Quem dá a nota. As chaves ficam sem prefixo: são os nomes que os SDKs usam.
     llm_provider: Literal["openai", "gemini"] = "gemini"
     llm_model: str | None = None  # vazio = o padrão do provedor, abaixo

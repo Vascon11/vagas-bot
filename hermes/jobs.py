@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from hermes.config import Settings
 from hermes.db import Database
-from hermes.evaluate import EvalResult, evaluate_new
+from hermes.evaluate import EvalResult, evaluate_new, pass_unscored
 from hermes.models import Status
 from hermes.search import RunResult, load_queries, load_rules, run_searches
 
@@ -32,6 +32,8 @@ def make_sources():
 
 
 def make_scorer_from(settings: Settings):
+    if not settings.llm_enabled:
+        return None
     if not (settings.llm_api_key and settings.profile_file.exists()):
         return None
     from hermes.scoring import make_scorer
@@ -56,7 +58,9 @@ def run_cycle(settings: Settings, sources=None, scorer=None) -> CycleResult:
     )
     scorer = scorer if scorer is not None else make_scorer_from(settings)
     evaluation = None
-    if scorer is None:
+    if not settings.llm_enabled:
+        evaluation = pass_unscored(db, load_rules(settings.searches_file))
+    elif scorer is None:
         log.warning("sem LLM ou profile.md: vagas ficam como 'nova' até configurar")
     else:
         evaluation = evaluate_new(

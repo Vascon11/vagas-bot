@@ -22,4 +22,4 @@ USER 999:1000
 HEALTHCHECK --interval=60s --timeout=10s --start-period=90s --retries=3 \
   CMD python -c "import os,sys,time; sys.exit(time.time()-os.path.getmtime('/app/data/heartbeat')>300)"
 
-CMD ["python", "-m", "hermes", "bot"]
+CMD ["python", "-m", "hermes", "canal"]

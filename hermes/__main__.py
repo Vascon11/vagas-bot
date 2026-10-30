@@ -142,6 +142,18 @@ def cmd_bot(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_canal(args, settings: Settings) -> int:
+    import asyncio
+
+    from hermes.canal import run_forever
+
+    if not settings.discord_webhook_url:
+        print("DISCORD_WEBHOOK_URL vazio no .env")
+        return 1
+    asyncio.run(run_forever(settings))
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="hermes")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -170,7 +182,8 @@ def main(argv=None) -> int:
     p.add_argument("status", choices=[s.value for s in Status])
     p.add_argument("--nota", help="texto que fica no histórico da vaga")
 
-    sub.add_parser("bot", help="bot do Telegram + buscas agendadas (o modo de produção)")
+    sub.add_parser("bot", help="bot do Telegram + buscas agendadas, com banco")
+    sub.add_parser("canal", help="só Discord, sem banco (o modo de produção)")
 
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -181,7 +194,8 @@ def main(argv=None) -> int:
     # vai na URL. Fora do -v isso já não aparece; com -v, o token acabaria no log.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     commands = {"buscar": cmd_buscar, "avaliar": cmd_avaliar, "rodar": cmd_rodar,
-                "listar": cmd_listar, "fila": cmd_fila, "marcar": cmd_marcar, "bot": cmd_bot}
+                "listar": cmd_listar, "fila": cmd_fila, "marcar": cmd_marcar, "bot": cmd_bot,
+                "canal": cmd_canal}
     return commands[args.cmd](args, Settings())
 
 

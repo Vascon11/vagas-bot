@@ -1,49 +1,46 @@
 # vagas-bot
 
-Assistente pessoal de busca e acompanhamento de vagas. Coleta vagas, dá nota contra o
-perfil, pede aprovação pelo Telegram e acompanha a candidatura pelo e-mail até a
-recusa, a contratação ou 90 dias sem resposta. **Nunca se candidata sozinho.**
+Coleta vagas de estágio e júnior em São Paulo (LinkedIn e Gupy), descarta as que não
+servem e posta as que sobram num canal do Discord. **Nunca se candidata sozinho.**
 
-Estado atual: **todas as fases do MVP**
-- Coleta: LinkedIn via [JobSpy](https://github.com/speedyapply/JobSpy) (sem login) e a API
-  pública da Gupy.
-- Banco SQLite com máquina de estados e deduplicação entre fontes.
-- Pré-filtro por título/tipo (sem custo) e nota de 0 a 100 com a API da OpenAI, calibrada
-  pelas últimas decisões do usuário (Gemini por padrão; OpenAI como alternativa).
-- Bot do Telegram: cards com ✅ Vou aplicar / 📨 Apliquei / ❌ Descartar, comandos
-  `/pendentes`, `/aplicadas`, `/buscar`, `/resumo`, busca a cada 2 h, resumo às 8h e
-  varredura dos 90 dias sem resposta.
-- E-mail: o Outlook redireciona os e-mails de recrutamento para um Gmail, lido por IMAP
-  (só leitura, e só as mensagens endereçadas ao Outlook). O LLM classifica (confirmação,
-  teste, entrevista, recusa…), liga à candidatura e atualiza o estado; se não souber de
-  qual vaga é, pergunta no Telegram com botões.
-- Deploy: `./deploy/deploy.sh` publica no servidor como o container `vagas-bot`.
+## Modo canal (o que roda em produção)
+
+`python -m hermes canal`: a cada 2 h busca, aplica o pré-filtro e posta no Discord por
+webhook. **Não guarda vaga em disco**: sem banco, sem Telegram, sem LLM. Pra não repetir
+vaga, lembra na memória do processo o que já postou, por 7 dias
+(`HERMES_REMEMBER_DAYS`). Num restart a memória zera; como a busca só olha as últimas
+3 h (`hours_old` no `searches.yaml`), o que pode repetir é pouco.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m hermes buscar --dry-run          # só imprime
-.venv/bin/python -m hermes buscar --only estagio-dev # grava em data/hermes.db
-.venv/bin/python -m hermes avaliar --limit 5         # pré-filtro + nota (precisa de OPENAI_API_KEY)
-.venv/bin/python -m hermes rodar                     # buscar + avaliar
-.venv/bin/python -m hermes listar                    # vagas esperando você, pela nota
-.venv/bin/python -m hermes bot                       # modo de produção: bot + agendamento
+cp .env.example .env                                # basta o DISCORD_WEBHOOK_URL
+.venv/bin/python -m hermes buscar --dry-run          # só imprime o que a busca acha
+.venv/bin/python -m hermes canal                     # o loop que posta no Discord
 .venv/bin/pytest
 ```
 
-Configuração: `.env` (copie de `.env.example`), `profile.md` (copie de `profile.example.md`;
-fica fora do git) e `searches.yaml`, com as buscas e o pré-filtro. Mantenha o volume baixo: é o que protege o IP
-de bloqueio pelo LinkedIn.
-
-
 ## Onde mexer no filtro das vagas
 
-Sem LLM (`HERMES_LLM_ENABLED=false`), quem decide o que vira card é só o pré-filtro:
+Sem LLM, quem decide o que vira card é só o pré-filtro:
 
 - `searches.yaml`: os termos buscados em cada fonte e a lista `excluir_no_titulo`.
+  O primeiro suspeito das vagas fora da área é o `gupy_term: "estágio"` da busca
+  `estagio-dev`: na Gupy ele traz estágio de qualquer área (engenharia civil,
+  secretariado…).
 - `hermes/filters.py`: a função `prefilter(title, level, rules)`, que devolve o motivo do
   descarte ou `None`. É o ponto pra trocar por uma análise melhor (palavras-chave de área,
-  peso por termo, leitura da descrição etc.).
-- `tests/test_phase2.py`: os testes do pré-filtro. Rode `.venv/bin/pytest` antes de mandar PR.
-- `hermes/scoring.py`: a nota com LLM, usada só quando `HERMES_LLM_ENABLED=true`.
+  peso por termo, leitura da descrição etc.). A vaga inteira (com `description`) está no
+  `JobPosting`, em `hermes/models.py`.
+- `hermes/canal.py`: `to_post()` é onde o pré-filtro é aplicado no modo canal.
+- `tests/test_phase2.py` e `tests/test_canal.py`: os testes. Rode `.venv/bin/pytest`
+  antes de mandar PR.
 
-Pra testar sem Telegram nem Discord: `.venv/bin/python -m hermes buscar --dry-run`.
+## Modo bot (antigo, com banco)
+
+`python -m hermes bot` é a versão anterior: guarda as vagas em SQLite, dá nota de 0 a 100
+com LLM (Gemini ou OpenAI) contra um `profile.md`, manda cards com botões no Telegram,
+acompanha a candidatura pelo e-mail (IMAP) e marca "sem resposta" depois de 90 dias. Os
+comandos `buscar`, `avaliar`, `rodar`, `listar`, `fila` e `marcar` são desse modo e usam
+`data/hermes.db`. O código continua aqui, mas não é o que está em produção.
+
+Deploy no servidor: `./deploy/deploy.sh` (container `vagas-bot`).

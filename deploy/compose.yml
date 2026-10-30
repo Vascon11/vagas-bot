@@ -21,7 +21,7 @@ services:
     mem_limit: 384m
     cpus: 0.5
     networks: [vagas_net]
-    # Nenhuma porta publicada: o Telegram é long polling, tudo é conexão de saída.
+    # Nenhuma porta publicada: Discord (webhook) e Telegram são conexões de saída.
     logging:
       driver: json-file
       options: {max-size: "5m", max-file: "3"}

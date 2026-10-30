@@ -12,10 +12,10 @@ REMOTE_DIR="/DATA/AppData/vagas-bot"
 
 cd "$(dirname "$0")/.."
 
-# Dois processos lendo o mesmo bot do Telegram brigam (409 Conflict) e as
-# mensagens se perdem entre eles.
-if pgrep -f "python -m hermes .*bot" >/dev/null; then
-  echo "✗ o bot está rodando nesta máquina — pare-o antes (só um pode ler o Telegram)"
+# Dois processos ao mesmo tempo postam cada vaga duas vezes no Discord (e, no modo
+# bot, brigam pelo Telegram com 409 Conflict).
+if pgrep -f "python -m hermes .*(bot|canal)" >/dev/null; then
+  echo "✗ o bot está rodando nesta máquina — pare-o antes"
   exit 1
 fi
 
@@ -39,13 +39,6 @@ rsync -az searches.yaml profile.md "$HOST:$REMOTE_DIR/config/"
 rsync -az deploy/compose.yml "$HOST:$REMOTE_DIR/compose.yml"
 # Segredos: só o dono lê. O daemon do Docker (root) lê para o env_file.
 rsync -az --chmod=F600 .env "$HOST:$REMOTE_DIR/.env"
-
-# Primeiro deploy: leva o banco local, para não perder o histórico nem reenviar
-# no Telegram vagas que já foram mostradas. Depois disso o servidor é a fonte.
-if [[ -s data/hermes.db ]] && ! ssh "$HOST" "test -e $REMOTE_DIR/data/hermes.db"; then
-  echo "  levando o banco local (primeiro deploy)"
-  rsync -az data/hermes.db "$HOST:$REMOTE_DIR/data/hermes.db"
-fi
 
 # O host não tem o plugin `docker compose`: ele vem de um container efêmero,
 # mesmo padrão do resume e do ImovAI nesta máquina.

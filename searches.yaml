@@ -12,7 +12,10 @@
 defaults:
   location: "São Paulo, Brasil"
   sites: [linkedin, gupy]
-  hours_old: 48
+  # Janela curta de propósito: o modo canal não guarda nada em disco, então depois de
+  # um restart repete no máximo o que saiu nessas horas. Deixe perto do intervalo
+  # entre buscas (HERMES_SEARCH_EVERY_HOURS) mais uma folga.
+  hours_old: 3
   results_wanted: 15
 
 searches:

@@ -65,6 +65,8 @@ class Settings(BaseSettings):
         return bool(self.gmail_address and self.gmail_app_password and self.mail_only_to)
 
     search_every_hours: float = 2
+    # Modo canal: por quantos dias a memória lembra uma vaga já postada.
+    remember_days: float = 7
     digest_hour: int = 8  # resumo diário e varredura dos 90 dias
     timezone: str = "America/Sao_Paulo"
 

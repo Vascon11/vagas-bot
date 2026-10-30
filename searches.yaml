@@ -70,6 +70,6 @@ discord:
     estagio: 1565855671717470408  # Vagas de Estágio
     junior: 1565863374980513822   # Vagas de Júnior
     pleno: 1565863605100871740    # Vagas de Pleno
-    trainee: 1565863971037253753  # Vagas de Trainee
-    # senior: 0                   # Vagas de Sênior: crie a thread e ponha o ID aqui
+    trainee: 1565864076721000589  # Vagas de Trainee
+    senior: 1565863971037253753   # Vagas de Sênior
     outros: 1565864173051580496   # Outras Vagas

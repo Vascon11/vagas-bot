@@ -1,4 +1,4 @@
-# Hermes
+# vagas-bot
 
 Assistente pessoal de busca e acompanhamento de vagas. Coleta vagas, dá nota contra o
 perfil, pede aprovação pelo Telegram e acompanha a candidatura pelo e-mail até a
@@ -34,3 +34,16 @@ Configuração: `.env` (copie de `.env.example`), `profile.md` (copie de `profil
 fica fora do git) e `searches.yaml`, com as buscas e o pré-filtro. Mantenha o volume baixo: é o que protege o IP
 de bloqueio pelo LinkedIn.
 
+
+## Onde mexer no filtro das vagas
+
+Sem LLM (`HERMES_LLM_ENABLED=false`), quem decide o que vira card é só o pré-filtro:
+
+- `searches.yaml`: os termos buscados em cada fonte e a lista `excluir_no_titulo`.
+- `hermes/filters.py`: a função `prefilter(title, level, rules)`, que devolve o motivo do
+  descarte ou `None`. É o ponto pra trocar por uma análise melhor (palavras-chave de área,
+  peso por termo, leitura da descrição etc.).
+- `tests/test_phase2.py`: os testes do pré-filtro. Rode `.venv/bin/pytest` antes de mandar PR.
+- `hermes/scoring.py`: a nota com LLM, usada só quando `HERMES_LLM_ENABLED=true`.
+
+Pra testar sem Telegram nem Discord: `.venv/bin/python -m hermes buscar --dry-run`.

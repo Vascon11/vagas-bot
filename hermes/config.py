@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     search_every_hours: float = 2
     # Modo canal: por quantos dias a memória lembra uma vaga já postada.
     remember_days: float = 7
+    # Modo canal: quantas vagas por dia o LLM pode classificar quando as regras não
+    # acham o nível (as outras vão para "outros"). 0 desliga. Usa o provedor, o modelo
+    # e a chave de cima; independe de llm_enabled, que é da nota do modo bot.
+    level_llm_per_day: int = 0
     digest_hour: int = 8  # resumo diário e varredura dos 90 dias
     timezone: str = "America/Sao_Paulo"
 

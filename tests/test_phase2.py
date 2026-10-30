@@ -97,7 +97,9 @@ def test_prefilter(title, level, discarded):
 def test_real_yaml_rules_do_not_drop_mid_senior_label():
     rules = load_rules(ROOT / "searches.yaml")
     assert prefilter("Desenvolvedor FullStack Júnior", "mid-senior level", rules) is None
-    assert prefilter("Desenvolvedor Java Pleno", None, rules) is not None
+    # Pleno tem thread própria no Discord; sênior não.
+    assert prefilter("Desenvolvedor Java Pleno", None, rules) is None
+    assert prefilter("Desenvolvedor Java Sênior", None, rules) is not None
 
 
 def test_yaml_source_specific_keys_go_to_extra():

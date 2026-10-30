@@ -6,6 +6,8 @@ fantasma. As últimas decisões do Gabriel entram como exemplo, para a nota se
 calibrar pelo gosto dele sem precisar de memória externa.
 """
 
+import html
+import re
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -51,6 +53,46 @@ class Score(BaseModel):
     alertas: list[str]
 
 
+# Nível das vagas que as regras de filters.py não resolveram (modo canal). Prompt e
+# entrada curtos de propósito: várias vagas numa chamada, só o trecho dos requisitos.
+LEVEL_INSTRUCTIONS = """\
+Classifique o nível de cada vaga de emprego abaixo pelo título e pelos requisitos.
+- estagio: estágio. aprendiz: jovem aprendiz. trainee: programa de trainee.
+- junior: até 1 ano de experiência ou início de carreira.
+- pleno: 2 a 3 anos de experiência ou atuação com autonomia.
+- senior: 4 anos ou mais, liderança técnica ou referência no time.
+- indefinido: o texto não dá pistas suficientes. Não chute.
+Responda uma entrada por vaga, com o número dela entre colchetes.
+"""
+EXCERPT = 1200  # caracteres por vaga; o bastante para a seção de requisitos
+# Onde começa a seção de requisitos. A Gupy cola os blocos ("...missãoRequisitos"),
+# então sem \b.
+REQUIREMENTS = re.compile(
+    r"requisitos|qualifica[cç][oõ]es|o que (?:esperamos|buscamos|procuramos)|requirements"
+    r"|qualifications",
+    re.IGNORECASE,
+)
+
+
+def requirements_excerpt(description: str | None) -> str:
+    """O trecho da descrição que diz o nível: a partir dos requisitos, se acha."""
+    if not description:
+        return "(sem descrição)"
+    text = html.unescape(description)
+    m = REQUIREMENTS.search(text)
+    start = m.start() if m else 0
+    return " ".join(text[start:start + EXCERPT].split())
+
+
+class LevelGuess(BaseModel):
+    vaga: int
+    nivel: Literal["estagio", "aprendiz", "trainee", "junior", "pleno", "senior", "indefinido"]
+
+
+class LevelBatch(BaseModel):
+    vagas: list[LevelGuess]
+
+
 def format_job(row) -> str:
     desc = (row["description"] or "(sem descrição)")[:MAX_DESCRIPTION]
     return (
@@ -81,6 +123,14 @@ class Scorer:
             profile=self._profile, examples=format_examples(decisions)
         )
         return self.ask(instructions, format_job(row), Score)
+
+    def levels(self, jobs: list[tuple[str, str | None]]) -> list[str | None]:
+        """O nível de cada (título, descrição), numa chamada só. None = indefinido."""
+        text = "\n\n".join(f"[{i}] {title}\n{requirements_excerpt(desc)}"
+                           for i, (title, desc) in enumerate(jobs, 1))
+        got = {g.vaga: g.nivel for g in self.ask(LEVEL_INSTRUCTIONS, text, LevelBatch).vagas}
+        return [None if got.get(i, "indefinido") == "indefinido" else got[i]
+                for i in range(1, len(jobs) + 1)]
 
     def ask(self, instructions: str, text: str, schema: type[BaseModel]):
         """Uma chamada com saída estruturada no formato `schema` (nota, e-mail…)."""

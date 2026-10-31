@@ -21,11 +21,30 @@ defaults:
 searches:
   - name: estagio-dev
     term: "estágio desenvolvedor"
-    gupy_term: "estágio"
+    gupy_term: "estágio desenvolvimento"
 
   - name: estagio-ti
     term: "estágio TI"
     sites: [linkedin]
+
+  # Na Gupy, "estágio" sozinho traz qualquer área (odontologia, engenharia civil…).
+  # A busca é literal: cada área de tecnologia precisa do próprio termo. Evite
+  # "estágio programação": casa com "Programa de Estágio", de qualquer área.
+  - name: estagio-gupy-ti
+    term: "estágio ti"
+    sites: [gupy]
+
+  - name: estagio-gupy-tecnologia
+    term: "estágio tecnologia"
+    sites: [gupy]
+
+  - name: estagio-gupy-dados
+    term: "estágio dados"
+    sites: [gupy]
+
+  - name: estagio-gupy-software
+    term: "estágio software"
+    sites: [gupy]
 
   - name: junior-dev
     term: "desenvolvedor júnior"

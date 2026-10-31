@@ -104,7 +104,7 @@ def test_real_yaml_rules_do_not_drop_mid_senior_label():
 
 def test_yaml_source_specific_keys_go_to_extra():
     q = {q.name: q for q in load_queries(ROOT / "searches.yaml")}
-    assert q["estagio-dev"].extra == {"gupy_term": "estágio"}
+    assert q["estagio-dev"].extra == {"gupy_term": "estágio desenvolvimento"}
     assert q["estagio-ti"].sites == ("linkedin",)
     assert "gupy" in q["junior-dev"].sites
 

@@ -78,5 +78,5 @@ def test_dry_run_writes_nothing():
 
 def test_searches_yaml_loads():
     queries = load_queries(Path(__file__).parent.parent / "searches.yaml")
-    assert queries and all("linkedin" in q.sites for q in queries)
+    assert queries and all(q.sites for q in queries)
     assert {q.name for q in queries} >= {"estagio-dev"}

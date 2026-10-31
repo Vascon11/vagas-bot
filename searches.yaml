@@ -2,7 +2,7 @@
 # Mantenha poucas buscas e results_wanted baixo: volume alto é o que faz o LinkedIn
 # bloquear o IP de casa.
 #
-# sites: linkedin | indeed | gupy
+# sites: linkedin | indeed | gupy | ciadeestagios
 # job_type (só JobSpy): fulltime | parttime | internship | contract  (vazio = qualquer)
 # gupy_term / gupy_state: sobrescrevem term / estado só na Gupy, cuja busca por
 #   nome é bem mais literal que a do LinkedIn.
@@ -45,6 +45,15 @@ searches:
   - name: estagio-gupy-software
     term: "estágio software"
     sites: [gupy]
+
+  # Programas públicos da Companhia de Estágios, só de tecnologia e com inscrição
+  # aberta (o filtro de tecnologia fica na fonte; o term não é usado). hours_old maior
+  # porque o site só informa o dia da publicação. cia_state: UF aceita.
+  - name: estagio-cia
+    term: "programas de estágio"
+    sites: [ciadeestagios]
+    hours_old: 48
+    cia_state: SP
 
   - name: junior-dev
     term: "desenvolvedor júnior"

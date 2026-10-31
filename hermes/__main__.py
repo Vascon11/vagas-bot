@@ -8,6 +8,7 @@ from hermes.db import Database
 from hermes.evaluate import evaluate_new
 from hermes.models import Status
 from hermes.search import load_queries, load_rules, run_searches
+from hermes.sources.ciadeestagios import CiaDeEstagiosSource
 from hermes.sources.gupy import GupySource
 from hermes.sources.jobspy_source import JobSpySource
 
@@ -22,7 +23,7 @@ def cmd_buscar(args, settings: Settings) -> int:
     db = None if args.dry_run else Database(settings.db_path)
     result = run_searches(
         queries,
-        [JobSpySource(), GupySource()],
+        [JobSpySource(), GupySource(), CiaDeEstagiosSource()],
         db,
         pause=(settings.pause_min, settings.pause_max),
     )

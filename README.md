@@ -1,6 +1,7 @@
 # vagas-bot
 
-Coleta vagas de estágio e júnior em São Paulo (LinkedIn e Gupy), descarta as que não
+Coleta vagas de estágio e júnior em São Paulo (LinkedIn, Gupy e os programas públicos
+da Companhia de Estágios), descarta as que não
 servem e posta as que sobram num canal do Discord. **Nunca se candidata sozinho.**
 
 ## Modo canal (o que roda em produção)

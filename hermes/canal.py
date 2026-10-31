@@ -22,6 +22,7 @@ from hermes.filters import FilterRules, explain_level, prefilter
 from hermes.models import JobPosting
 from hermes.scoring import FatalScoringError, make_scorer  # os SDKs só carregam se usados
 from hermes.search import load_queries, load_rules, load_threads, run_searches
+from hermes.sources.ciadeestagios import CiaDeEstagiosSource
 from hermes.sources.gupy import GupySource
 from hermes.sources.jobspy_source import JobSpySource
 
@@ -138,7 +139,7 @@ async def cycle(settings: Settings, seen: Seen, post=post_card, sources=None,
     rules = load_rules(settings.searches_file)
     threads = load_threads(settings.searches_file)
     result = await asyncio.to_thread(
-        run_searches, queries, sources or [JobSpySource(), GupySource()], None,
+        run_searches, queries, sources or [JobSpySource(), GupySource(), CiaDeEstagiosSource()], None,
         pause=(settings.pause_min, settings.pause_max),
     )
     pending = to_post(result.found, rules, seen)

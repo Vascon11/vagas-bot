@@ -40,6 +40,12 @@ def load_rules(path: Path) -> FilterRules:
     return FilterRules.from_dict(_load(path).get("filtros"))
 
 
+def load_threads(path: Path) -> dict[str, str]:
+    """Nível -> ID da thread do Discord. ID vazio conta como thread não configurada."""
+    threads = (_load(path).get("discord") or {}).get("threads") or {}
+    return {level: str(tid) for level, tid in threads.items() if tid}
+
+
 @dataclass
 class RunResult:
     found: list[JobPosting] = field(default_factory=list)

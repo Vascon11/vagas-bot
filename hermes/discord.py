@@ -1,9 +1,9 @@
-"""Cópia dos cards num canal do Discord, por webhook.
+"""Cards das vagas num canal do Discord, por webhook.
 
-Só posta: aprovar, descartar e marcar continuam no Telegram. O canal é aberto
-aos amigos do Gabriel, então motivos e alertas da nota (que citam o perfil dele)
-ficam de fora. A URL do webhook é segredo (quem tem posta no canal), então nunca
-entra em log nem em mensagem de erro.
+No modo canal é a única saída; no modo bot é uma cópia, e aprovar, descartar e
+marcar continuam no Telegram. O canal é aberto aos amigos do Gabriel, então motivos
+e alertas da nota (que citam o perfil dele) ficam de fora. A URL do webhook é
+segredo (quem tem posta no canal), então nunca entra em log nem em mensagem de erro.
 """
 
 import json
@@ -29,13 +29,18 @@ def card_embed(row) -> dict:
             f"\n**Nota {row['score']}** · {s['recomendacao'].replace('_', ' ')} · "
             f"{s['nivel_detectado']} · {s['modelo_trabalho']}"
         )
+    # No modo canal a vaga não tem id (nada é guardado), mas tem o nível e de onde ele
+    # veio, para o grupo ver quando a classificação erra. A linha do banco não tem nível.
+    footer = [f"#{row['id']}"] if row["id"] else []
+    footer.append(row["source"])
+    if "nivel" in row.keys():
+        footer.append(row["nivel"])
     return {
         "title": row["title"][:256],
         "url": row["url"],
         "description": "\n".join(lines)[:4096],
         "color": color,
-        # No modo canal a vaga não tem id: nada é guardado.
-        "footer": {"text": f"#{row['id']} · {row['source']}" if row["id"] else row["source"]},
+        "footer": {"text": " · ".join(footer)},
     }
 
 
@@ -46,20 +51,27 @@ async def _send(webhook_url: str, payload: dict, client: httpx.AsyncClient | Non
     return (await client.post(webhook_url, json=payload)).status_code
 
 
-async def post_card(webhook_url: str, row, client: httpx.AsyncClient | None = None) -> bool:
-    """Posta o card. Devolve False se falhou; falha aqui nunca derruba o ciclo."""
+async def post_card(webhook_url: str, row, client: httpx.AsyncClient | None = None,
+                    thread_id: str | None = None) -> bool:
+    """Posta o card. Devolve False se falhou; falha aqui nunca derruba o ciclo.
+
+    Com `thread_id`, posta naquela thread do canal do webhook (substitui um
+    ?thread_id= que já venha na URL).
+    """
     # Sem menções: um título de vaga com @everyone não pinga o servidor.
     embed = card_embed(row)
     payload = {"embeds": [embed], "allowed_mentions": {"parse": []}}
     label = f"#{row['id']}" if row["id"] else repr(row["title"][:60])
     try:
+        if thread_id:
+            webhook_url = str(httpx.URL(webhook_url).copy_set_param("thread_id", thread_id))
         status = await _send(webhook_url, payload, client)
         if status == 400:
             # O Discord recusa link com "_" no domínio (ex.: novostalentos_x.gupy.io).
             # Segunda tentativa sem o título clicável, com o link no texto.
             embed["description"] = f"{embed['description']}\n{embed.pop('url')}"[:4096]
             status = await _send(webhook_url, payload, client)
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, httpx.InvalidURL) as exc:
         # A mensagem do httpx traz a URL; só o tipo do erro vai para o log.
         log.warning("Discord: falha ao postar a vaga %s (%s)", label, type(exc).__name__)
         return False

@@ -38,13 +38,15 @@ filtros:
     - sênior
     - senior
     - sr
-    - pleno
+    # "pleno" saiu daqui: tem thread própria no Discord (discord.threads abaixo).
     - especialista
     - lead
     - líder
     - tech lead
     - coordenador
     - coordenadora
+    - supervisor
+    - supervisora
     - gerente
     - manager
     - talent community
@@ -54,3 +56,20 @@ filtros:
     - talent_pool
     - director
     - executive
+
+# Modo canal: em qual thread do Discord cai cada nível. As threads precisam ser do
+# canal do webhook. ID = botão direito na thread > Copiar ID (modo desenvolvedor).
+# Níveis: estagio, aprendiz, trainee, junior, pleno, senior. Vaga sem nível
+# reconhecido ou sem thread aqui vai para "outros"; sem "outros", vai para onde a
+# URL do webhook aponta. O nível vem do título, do tipo da vaga ou da descrição
+# (hermes/filters.py) e aparece no rodapé do card, com o motivo.
+# Sênior pelo título continua descartado (excluir_no_titulo); a thread "senior"
+# recebe as que só a descrição mostra que são sênior. Aprendiz cai em "outros".
+discord:
+  threads:
+    estagio: 1565855671717470408  # Vagas de Estágio
+    junior: 1565863374980513822   # Vagas de Júnior
+    pleno: 1565863605100871740    # Vagas de Pleno
+    trainee: 1565864076721000589  # Vagas de Trainee
+    senior: 1565863971037253753   # Vagas de Sênior
+    outros: 1565864173051580496   # Outras Vagas
